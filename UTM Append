@@ -1,0 +1,41 @@
+<script src="https://cdn.jsdelivr.net/npm/url-search-params-polyfill@8.1.0/index.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+// In lieu of cookie tracking, use this code to append UTMs to all anchor links on the site.
+// Could adjust so it only appends to links for specific domains rather than external links.
+
+<script>
+  $(document).ready(function() {
+    // Parse the query string
+    var queryString = window.location.search;
+    console.log(queryString);
+    var URLSearchParams_wb = new URLSearchParams(queryString);
+
+    // Define UTM parameters to check for
+    var utmParameters = [
+      "utm_source", 
+      "utm_medium", 
+      "utm_campaign",
+      "utm_content",
+      "gclid",
+      "fbclid"
+    ];
+
+    // Build UTM string from present parameters
+    var utmString = "";
+    utmParameters.forEach(function(param) {
+      if (URLSearchParams_wb.has(param)) {
+        var value = URLSearchParams_wb.get(param);
+        utmString += (utmString ? '&' : '') + param + '=' + encodeURIComponent(value);
+      }
+    });
+
+    // Append UTM parameters to all anchor tags, not just those with a specific class
+    $("a").each(function() {
+      var href = $(this).attr("href");
+      if (href && !href.startsWith('#') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+        var separator = href.indexOf('?') !== -1 ? "&" : "?";
+        $(this).attr("href", href + separator + utmString);
+      }
+    });
+  });
+</script>
