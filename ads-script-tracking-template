@@ -1,50 +1,21 @@
 // This code sets the tracking template for all campaigns at the adgroup level
 // The code was sourced from https://fixel.ai/blog/google-ads-dynamic-tracking-template/ and modified by ChatGPT
-// Last Modified: February 2024
+// Last Modified: December 2024 (remove brackets, set at adgroup level)
 // Contact Pranab at pranabsachi@gmail.com 
 
 // Main function to set up tracking templates for Google Ads campaigns at the ad group level.
 function main() {
-    // Define the tracking template without ClickCease parameters, focusing on UTM and Google Ads parameters.
-    var TrackingTemplate = "{lpurl}?utm_source=google&utm_medium=cpc&utm_campaign={CampaignName}&utm_content={AdGroupName}&utm_term={keyword}&gclid={gclid}";
+    // Define the tracking template using standard Google Ads ValueTrack parameters
+    // These will be automatically replaced by Google Ads before the user clicks
+    var TrackingTemplate = "{lpurl}?utm_source=google&utm_medium=cpc&utm_campaign=CAMPAIGN_NAME&utm_content=ADGROUP_NAME&utm_term=KEYWORD";
 
     // Variables to filter which campaigns or ad groups to apply the template.
-    var _CAMPAIGN_CONTAINS = ""; // Filters campaigns by name contains this value
-    var _ADGROUP_CONTAINS = ""; // Filters ad groups by name contains this value
-    var STATUS = "ENABLED"; // Only apply changes to enabled campaigns or ad groups
+    var _CAMPAIGN_CONTAINS = ""; 
+    var _ADGROUP_CONTAINS = ""; 
+    var STATUS = "ENABLED"; 
 
-    // Checks if the tracking template contains necessary placeholders and logs a message if not.
-    validateTrackingTemplate(TrackingTemplate);
-
-    // Apply tracking template to campaigns if the {CampaignName} placeholder is included.
-    if (TrackingTemplate.includes("{CampaignName}")) {
-        setCampaignLevelTracking(TrackingTemplate, _CAMPAIGN_CONTAINS, STATUS);
-    }
-
-    // Apply tracking template to ad groups if the {AdGroupName} placeholder is included.
-    if (TrackingTemplate.includes("{AdGroupName}")) {
-        setAdGroupLevelTracking(TrackingTemplate, _ADGROUP_CONTAINS, _CAMPAIGN_CONTAINS, STATUS);
-    }
-}
-
-// Validates the presence of required placeholders in the tracking template.
-function validateTrackingTemplate(template) {
-    if (!template.includes("{CampaignName}") && !template.includes("{AdGroupName}")) {
-        Logger.log("Enter at least one of the {CampaignName} or {AdGroupName} parameter in the tracking template");
-        return;
-    }
-}
-
-// Sets the tracking template at the campaign level.
-function setCampaignLevelTracking(template, campaignFilter, status) {
-    var campaignIterator = getCampaignIterator(campaignFilter, status);
-    while (campaignIterator.hasNext()) {
-        var campaign = campaignIterator.next();
-        var campaignNameEncoded = encodeName(campaign.getName());
-        var campaigntemplate = template.replace(/{CampaignName}/g, campaignNameEncoded);
-        campaign.urls().setTrackingTemplate(campaigntemplate);
-        Logger.log(campaign.getName() + " => " + campaigntemplate);
-    }
+    // Apply tracking template to ad groups
+    setAdGroupLevelTracking(TrackingTemplate, _ADGROUP_CONTAINS, _CAMPAIGN_CONTAINS, STATUS);
 }
 
 // Sets the tracking template at the ad group level.
@@ -53,28 +24,22 @@ function setAdGroupLevelTracking(template, adGroupFilter, campaignFilter, status
     while (adgroupIterator.hasNext()) {
         var adgroup = adgroupIterator.next();
         var adGroupNameEncoded = encodeName(adgroup.getName());
-        var adgroupTemplate = template.replace(/{AdGroupName}/g, adGroupNameEncoded);
-        if (template.includes("{CampaignName}")) {
-            var campaignNameEncoded = encodeName(adgroup.getCampaign().getName());
-            adgroupTemplate = adgroupTemplate.replace(/{CampaignName}/g, campaignNameEncoded);
-        }
+        var campaignNameEncoded = encodeName(adgroup.getCampaign().getName());
+        
+        // Replace our placeholder text with the actual values
+        var adgroupTemplate = template
+            .replace(/CAMPAIGN_NAME/g, campaignNameEncoded)
+            .replace(/ADGROUP_NAME/g, adGroupNameEncoded)
+            .replace(/KEYWORD/g, '{keyword}');  // Keep this as a ValueTrack parameter
+            
         adgroup.urls().setTrackingTemplate(adgroupTemplate);
         Logger.log(adgroup.getCampaign().getName() + " => " + adgroup.getName() + " => " + adgroupTemplate);
     }
 }
 
-// Helper function to encode campaign or ad group names for URL compatibility.
+// Helper function to encode campaign or ad group names for URL compatibility
 function encodeName(name) {
-    return name.replace(/\s/g, '%20');
-}
-
-// Returns an iterator over campaigns based on filter criteria.
-function getCampaignIterator(filter, status) {
-    if (filter === "") {
-        return AdsApp.campaigns().withCondition("Status = " + status).get();
-    } else {
-        return AdsApp.campaigns().withCondition("Name contains '" + filter + "'").withCondition("Status = " + status).get();
-    }
+    return encodeURIComponent(name);  // Using encodeURIComponent for better URL encoding
 }
 
 // Returns an iterator over ad groups based on filter criteria.
